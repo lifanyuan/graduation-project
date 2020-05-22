@@ -168,18 +168,16 @@ class Traffic:
                 else:
                     self.uveh[i].computation_rate = 0  # 允许范围之外的车辆选择，但是给出低reward
         if np.size(a_v2v):
-            weights = np.array([self.uveh[i].w for i in a_v2v])  # 给出所有选择v2v方式车辆的weight，顺序是a_v2v的顺序
-            weights_sort = np.argsort(weights)[::-1]  # 给出index，索引所有的选择v2v方式的车辆，weight从大到小排序
-            # dij = self.distance_ij.copy()  # 得到距离的副本
-            for i in weights_sort:  # 得到所有v2v车辆对基站车辆的选择# 得到计算速率
-                j = action[a_v2v[i]]  # a_v2v[i]代表经过权重排序后的user车辆序号，相当于序号的映射变换
+            for i in a_v2v:  # 得到所有v2v车辆对基站车辆的选择# 得到计算速率
+                j = action[i]  # user[i]必是v2v
                 if self.bveh[j].choice == -2:  # 对基站车辆来说，序号（大于等于0）代表与其配对的用户车辆,-2代表尚未被选择
-                    self.bveh[j].choice = a_v2v[i]
-                    self.uveh[a_v2v[i]].computation_rate = self.cij(i, j) * self.bveh[int(j)].f / (
+                    self.bveh[j].choice = i
+                    self.uveh[i].choice = j
+                    self.uveh[i].computation_rate = self.cij(i, j) * self.bveh[int(j)].f / (
                             self.cij(i, j) * self.phi + self.bveh[int(j)].f)
                 else:
                     # print('被占用的base序号为：', j, '  其选择为:', self.bveh[j].choice)
-                    self.uveh[a_v2v[i]].computation_rate = 0
+                    self.uveh[i].computation_rate = 0
         reward = np.sum([i.computation_rate for i in self.uveh])  # 总reward
         if test==2:
             reward /= 28e6
