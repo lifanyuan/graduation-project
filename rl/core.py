@@ -130,7 +130,11 @@ class Agent(object):
                     callbacks.on_episode_begin(episode)
                     episode_step = np.int16(0)
                     episode_reward = np.float32(0)
-
+                    loss_list = []
+                    v2i_number = 0
+                    episode_comrate = 0
+                    conflict = 0
+                    out_of_range = 0
                     # Obtain the initial observation by resetting the environment.
                     self.reset_states()
                     observation = deepcopy(env.reset())
@@ -175,8 +179,8 @@ class Agent(object):
                 callbacks.on_step_begin(episode_step)
                 # This is were all of the work happens. We first perceive and compute the action
                 # (forward step) and then use the reward to improve (backward step).
-                if self.step == 2000:
-                    _=1
+                if self.step == 5000:
+                    _ = 1
                 action, q_values = self.forward(observation, 1)
                 if self.processor is not None:
                     action = self.processor.process_action(action)
@@ -205,7 +209,11 @@ class Agent(object):
                     done = True
                 metrics = self.backward(reward, terminal=done)
                 episode_reward += reward
-
+                loss_list.append(metrics[0])
+                v2i_number += info['v2i_number']
+                episode_comrate += info['comrate']
+                conflict += info['conflict']
+                out_of_range += info['out_of_range']
                 step_logs = {
                     'action': action,
                     'observation': observation,
@@ -226,12 +234,19 @@ class Agent(object):
                     # always non-terminal by convention.
                     self.forward(observation)
                     self.backward(0., terminal=False)
-
+                    loss = np.nanmean(loss_list)
+                    v2i_rate = v2i_number/episode_step
+                    conflict_rate = conflict / episode_step
                     # This episode is finished, report and reset.
                     episode_logs = {
                         'episode_reward': episode_reward,
+                        'loss': loss,
                         'nb_episode_steps': episode_step,
                         'nb_steps': self.step,
+                        'episode_comrate': episode_comrate,
+                        'v2i_rate': v2i_rate,
+                        'conflict_rate': conflict_rate,
+                        'out_of_range': out_of_range,
                     }
                     callbacks.on_episode_end(episode, episode_logs)
 
@@ -317,7 +332,11 @@ class Agent(object):
             callbacks.on_episode_begin(episode)
             episode_reward = 0.
             episode_step = 0
-
+            comrate = 0
+            v2i_number = 0
+            conflict = 0
+            out_of_range = 0
+            action_his = []
             # Obtain the initial observation by resetting the environment.
             self.reset_states()
             observation = deepcopy(env.reset())
@@ -392,6 +411,11 @@ class Agent(object):
                     'episode': episode,
                     'info': accumulated_info,
                 }
+                comrate += info['comrate']
+                v2i_number += info['v2i_number']
+                conflict += info['conflict']
+                out_of_range += info['out_of_range']
+                action_his.append(tuple(env.actions_all[action]))
                 callbacks.on_step_end(episode_step, step_logs)
                 episode_step += 1
                 self.step += 1
@@ -403,11 +427,17 @@ class Agent(object):
             # always non-terminal by convention.
             self.forward(observation)
             self.backward(0., terminal=False)
-
+            v2i_rate = v2i_number / episode_step
+            conflict_rate = conflict / episode_step
             # Report end of episode.
             episode_logs = {
                 'episode_reward': episode_reward,
                 'nb_steps': episode_step,
+                'computation_rate': comrate,
+                'v2i_rate': v2i_rate,
+                'conflict_rate': conflict_rate,
+                'out_of_range': out_of_range,
+                'action_histroy': action_his,
             }
             callbacks.on_episode_end(episode, episode_logs)
         callbacks.on_train_end()
