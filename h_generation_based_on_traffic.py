@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import math
-from gym import spaces, logger
+from gym import spaces  # , logger
 
 
 class Traffic:
@@ -127,11 +127,11 @@ class Traffic:
                 self.v2v_channel_gain[i][j] = average * np.random.exponential()
 
     def get_observation(self, test=0):  # 得到目前的环境observation值
-        gain_x, gain_h = 0.05, 8e8  # 为使状态变量接近1
+        gain_x, gain_y, gain_h= 0.01, 1/7.5, 3e8  # 为使状态变量接近1
         users_location_x = np.array([i.x for i in self.uveh]) * gain_x
-        users_location_y = np.array([i.y for i in self.uveh])
+        users_location_y = np.array([i.y for i in self.uveh]) * gain_y
         bases_location_x = np.array([i.x for i in self.bveh]) * gain_x
-        bases_location_y = np.array([i.y for i in self.bveh])
+        bases_location_y = np.array([i.y for i in self.bveh]) * gain_y
         hi = self.v2i_channel_gain * gain_h
         hij = self.v2v_channel_gain.ravel() * gain_h
         if test:
@@ -152,7 +152,7 @@ class Traffic:
         # -1代表采用v2i，大于等于0代表v2v里面，选择卸载的目标基站车辆序号
         # assert np.all(-1<=action<=self.n_bveh-1), 'action取值错误'
         action = self.actions_all[a]
-        tau = 0
+        out_of_range = 0
         a_v2i = np.nonzero(action == -1)[0]  # all indices of vehicles in v2i mode
         a_v2v = np.nonzero(action >= 0)[0]  # all indices of vehicles in v2v mode
         for i in self.bveh:  # 计算完成，解除对基站车辆的占用
@@ -167,6 +167,7 @@ class Traffic:
                     self.uveh[i].computation_rate = tau * self.ci(i)
                 else:
                     self.uveh[i].computation_rate = 0  # 允许范围之外的车辆选择，但是给出低reward
+                    out_of_range += 1
         if np.size(a_v2v):
             for i in a_v2v:  # 得到所有v2v车辆对基站车辆的选择# 得到计算速率
                 j = action[i]  # user[i]必是v2v
@@ -178,19 +179,15 @@ class Traffic:
                 else:
                     # print('被占用的base序号为：', j, '  其选择为:', self.bveh[j].choice)
                     self.uveh[i].computation_rate = 0
-        reward = np.sum([i.computation_rate for i in self.uveh])  # 总reward
-        if test==2:
-            reward /= 28e6
-            return tau
-        elif test==1:
-            reward /= 28e6
-            return reward
-        else:
-            return reward
+        comrate = np.sum([i.computation_rate for i in self.uveh])  # 总计算率
+        return comrate, out_of_range
 
     def step(self, action, test=0):  # action目前仅仅是index 如果test=1，缩小reward方便调试
         self.n_step += 1
-        reward = (self.evaluate(action, test) - self.evaluate(0, test)) / 28e6  # 当前总计算率
+        a = self.actions_all[action]
+        comrate_sum, out_of_range = self.evaluate(action, test)
+        bias = 2.2e7
+        reward = (comrate_sum - bias) / bias  # 当前总计算率
         # self.comrate_his.append(comrate_sum)
         # assert self.n_step == len(self.comrate_his), '长度不相等'
         self.renew_traffic()  # 刷新环境
@@ -199,8 +196,19 @@ class Traffic:
         observ = self.get_observation(test)  # 生成环境值
         users_location_x = [i.x for i in self.uveh]
         done = all(map(lambda x: x > self.road_length, users_location_x))  # 检查车辆位置是否超过AP覆盖范围
-        # done = self.n_step == 70
-        info = {}
+
+        v2i_number = sum(a == -1)
+        a_set = set(a)  # 计算竞争基站车辆的数目
+        if -1 in a_set:
+            a_set.remove(-1)
+        conflict = 0
+        for i in a_set:
+            num = sum(a == i)
+            if num > 1:
+                conflict += num - 1
+
+        info = {'comrate': comrate_sum, 'v2i_number': v2i_number,
+                'conflict': conflict, 'out_of_range': out_of_range,}
         # if done:
         #     reward = np.mean(self.comrate_his)
         # else:
@@ -218,7 +226,7 @@ class Car:
         self.choice = -2  # 对用户车辆来说，-1代表采用v2i，大于等于0代表v2v里面，选择卸载的目标基站车辆序号
         # 对基站车辆来说，序号（大于等于0）代表与其配对的用户车辆,-2代表尚未被选择
         self.computation_rate = 0  # 仅对用户车辆有效
-        self.f = 5e8  # CPU转速，cycles per second， 仅对基站车辆有效
+        self.f = 8e8  # CPU转速，cycles per second， 仅对基站车辆有效
 
 
 if __name__ == "__main__":
