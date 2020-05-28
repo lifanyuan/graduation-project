@@ -44,7 +44,7 @@ def save_history(history, name):
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-env = Traffic(4, 4)
+env = Traffic(5, 5, bias=2.67e7)
 np.random.seed(123)
 # env.seed(123)
 nb_actions = env.action_space.n
@@ -74,7 +74,7 @@ dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.20000
-train_history = dqn.fit(env, nb_steps=10000, visualize=False, verbose=2)
+train_history = dqn.fit(env, nb_steps=15000, visualize=False, verbose=2)
 
 # # After training is done, we save the final weights.
 dqn.save_weights('dqn_{}_weights.h5f'.format('MECDQN'), overwrite=True)

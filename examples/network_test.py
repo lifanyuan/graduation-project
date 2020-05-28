@@ -13,7 +13,7 @@ from h_generation_based_on_traffic import Traffic
 
 
 # Get the environment and extract the number of actions.
-env = Traffic(4, 4)
+env = Traffic(5, 5)
 # np.random.seed(123)
 nb_actions = env.action_space.n
 
