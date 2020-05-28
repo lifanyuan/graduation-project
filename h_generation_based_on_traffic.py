@@ -5,7 +5,7 @@ from gym import spaces  # , logger
 
 
 class Traffic:
-    def __init__(self, n_uveh, n_bveh):
+    def __init__(self, n_uveh, n_bveh, ap_f=3e9, veh_f=8e8):
         # np.random.seed(123)
         self.n_uveh = n_uveh  # number of user vehicles.
         self.n_bveh = n_bveh  # number of base vehicles.
@@ -23,7 +23,7 @@ class Traffic:
         self.ap_position = (self.road_length / 2, 0)  # AP position [x, y]
         self.ap_height = 30  # AP antenna height m
         self.ap_gain = 10  # AP 天线增益
-        self.ap_f = 3e9  # ap 计算机性能
+        self.ap_f = ap_f  # ap 计算机性能
         # 通信参数
         self.veh_gain = 2  # 车辆天线增益
         self.fc = 915e6  # carrier frequency
@@ -31,6 +31,7 @@ class Traffic:
         self.bandwidth = 2e6  # B=2MHz
         self.noise = 1e-10  # receiver noise power N=10^-10
         # 其他参数
+        self.veh_f = veh_f  # 车辆计算机性能
         self.phi = 100  # number of cycles needed to execute a bit of input task file
         # self.observ_dim = 2 * n_uveh + 2 * n_bveh
         self.observ_dim = 2 * n_uveh + 2 * n_bveh + n_bveh * n_uveh + n_uveh
@@ -78,14 +79,14 @@ class Traffic:
             else:
                 w = 1  # 1.5
             x = np.random.uniform(0, x_limit * self.road_length)  # select x coordinate for a vehicle
-            self.uveh.append(Car(w=w, x=x, y=lane, v=0))  # add a User vehicle
+            self.uveh.append(Car(x=x, y=lane, v=0, f=self.veh_f))  # add a User vehicle
         for j in range(self.n_bveh):
             if np.random.randint(self.n_lanes) == 0:  # select a lane from 2 lanes randomly
                 lane = self.lane1
             else:
                 lane = self.lane2
             x = np.random.uniform(0, x_limit * self.road_length)  # select x coordinate for a vehicle
-            self.bveh.append(Car(w=0, x=x, y=lane, v=0))  # add a Base vehicle
+            self.bveh.append(Car(x=x, y=lane, v=0, f=self.veh_f))  # add a Base vehicle
         self.renew_v2v_channel_gain()
         self.renew_v2i_channel_gain()
         observ = self.get_observation(test)
@@ -127,7 +128,7 @@ class Traffic:
                 self.v2v_channel_gain[i][j] = average * np.random.exponential()
 
     def get_observation(self, test=0):  # 得到目前的环境observation值
-        gain_x, gain_y, gain_h= 0.01, 1/7.5, 3e8  # 为使状态变量接近1
+        gain_x, gain_y, gain_h = 0.01, 1/7.5, 3e8  # 为使状态变量接近1
         users_location_x = np.array([i.x for i in self.uveh]) * gain_x
         users_location_y = np.array([i.y for i in self.uveh]) * gain_y
         bases_location_x = np.array([i.x for i in self.bveh]) * gain_x
@@ -217,8 +218,8 @@ class Traffic:
 
 
 class Car:
-    def __init__(self, w, x, y, v):
-        self.w = w  # weight
+    def __init__(self, x, y, v, f):
+        self.w = 1  # weight
         self.x = x  # x_coordinate m
         self.y = y  # y_coordinate m
         self.v = v  # current velocity m/s
@@ -226,7 +227,7 @@ class Car:
         self.choice = -2  # 对用户车辆来说，-1代表采用v2i，大于等于0代表v2v里面，选择卸载的目标基站车辆序号
         # 对基站车辆来说，序号（大于等于0）代表与其配对的用户车辆,-2代表尚未被选择
         self.computation_rate = 0  # 仅对用户车辆有效
-        self.f = 8e8  # CPU转速，cycles per second， 仅对基站车辆有效
+        self.f = f  # CPU转速，cycles per second， 仅对基站车辆有效
 
 
 if __name__ == "__main__":
