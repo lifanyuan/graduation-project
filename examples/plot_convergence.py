@@ -12,14 +12,12 @@ def load_history(name):
 def plot(history, key, window_length=10):
     h = history[key]
     h_mean = [np.mean(h[i:i + window_length]) for i in range(len(h))]
-    h_mean2 = [np.mean(h[i:i + 3*window_length]) for i in range(len(h))]
     # fig = plt.figure()
     # ax = fig.add_subplot(121)
-    plt.plot(h, label=key)
+    plt.plot(h, label='computation rate')
     plt.plot(h_mean, label='%d moving average' % window_length)
-    plt.plot(h_mean2, label='%d moving average' % (3*window_length))
     plt.xlabel('x-episodes')
-    plt.ylabel('y-'+key)
+    plt.ylabel('y-computation rate')
     plt.legend()
     # ax.set_title('Episode_reward')
     # ax.set_xlabel('episode')
@@ -31,11 +29,5 @@ def plot(history, key, window_length=10):
 
 
 history = load_history('MECDQNhistory.csv')
-plot(history, 'episode_reward')
+
 plot(history, 'episode_comrate')
-
-# plot(history, 'loss')
-
-plot(history, 'v2i_rate')
-plot(history, 'conflict_rate')
-plot(history, 'out_of_range')
