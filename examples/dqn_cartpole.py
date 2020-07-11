@@ -44,7 +44,7 @@ def save_history(history, name):
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-env = Traffic(5, 5, bias=2.67e7)
+env = Traffic(4, 4, bias=2.67e7)
 np.random.seed(123)
 # env.seed(123)
 nb_actions = env.action_space.n

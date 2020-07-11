@@ -9,27 +9,19 @@ def load_history(name):
     data = pd.read_csv(name)
     return data
 
+
 history = load_history('MECDQNhistory.csv')
 history_new = load_history('MECDQNhistorynew.csv')
 h = history['episode_comrate']
 h_mean = [np.mean(h[i:i + 10]) for i in range(len(h))]
 
-new = history_new['episode_comrate'][0:225]
-n_mean = [np.mean(new[i:i + 10]) for i in range(225)]
-fig = plt.figure()
-ax1 = fig.add_subplot(121)
-ax2 = fig.add_subplot(122)
-
-plt.sca(ax1)
-plt.plot(h, label='computation rate', linestyle=':')
-plt.plot(h_mean, label='%d moving average' % 10)
-plt.xlabel('x-episodes')
-plt.ylabel('y-computation rate')
-plt.legend()
-
-plt.sca(ax2)
-plt.plot(new, label='computation rate', linestyle=':')
-plt.plot(n_mean, label='%d moving average' % 10)
+new = history_new['episode_comrate'][0:180]
+n_mean = [np.mean(new[i:i + 10]) for i in range(180)]
+fig, ax = plt.subplots()
+# plt.plot(h, label='parallel scheme', linestyle=':')
+plt.plot(h_mean, label='parallel scheme')
+# plt.plot(new, label='serial scheme', linestyle=':')
+plt.plot(n_mean, label='serial scheme')
 plt.xlabel('x-episodes')
 plt.ylabel('y-computation rate')
 plt.legend()
