@@ -34,7 +34,7 @@ history = load_history('MECDQNhistory.csv')
 plot(history, 'episode_reward')
 plot(history, 'episode_comrate')
 
-plot(history, 'loss')
+# plot(history, 'loss')
 
 plot(history, 'v2i_rate')
 plot(history, 'conflict_rate')
